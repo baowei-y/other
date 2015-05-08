@@ -36,7 +36,8 @@ fi
 
 put_invalid_list=$log_dir/put_hdfs_invalid.list
 put_hdfs_list=$log_dir/put_hdfs.list
-put_retry_list=$log_dir/retry_put.list
+put_retry_list=$log_dir/put_retry.list
+put_black_list=$log_dir/put_black.list
 
 final_dir=${3:-/opt/localfiles}
 hdfs_dir=${4:-/logs_backup}
@@ -255,7 +256,7 @@ HDFS_LIST_CHECK(){
 
 # 主控进程函数
 MASTER_CTRL(){
-  if [[ $# -ne 4 ]];then
+  if [[ $# -ne 5 ]];then
     echo "`$log_date` $FUNCNAME Error \$#!=4" >> $log_file
     return 1 
   fi
@@ -275,7 +276,7 @@ MASTER_CTRL(){
       fi
       local thread_file=`THREAD_FILE_POLICY $t $file_path`
       if [[ -f $thread_file ]];then
-        /bin/bash $3 $thread_file $final_dir $hdfs_dir $2 &
+        /bin/bash $3 $thread_file $final_dir $hdfs_dir $2 $5 &
         sed -i "1d" $1
       else
         ls "$file_path"_"$5"_* &> /dev/null ; local rev=$?
@@ -292,4 +293,4 @@ MASTER_CTRL(){
   rm -rf $pid_file
 }
 
-MASTER_CTRL $put_hdfs_list $put_retry_list $thread_script $threads 
+MASTER_CTRL $put_hdfs_list $put_retry_list $thread_script $threads $put_black_list 

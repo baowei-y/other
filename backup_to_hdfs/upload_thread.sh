@@ -14,7 +14,8 @@ echo $$ >> $1
 log_date="/bin/date +%H:%M:%S/%Y-%m-%d"
 log_dir=/var/log/backup_to_hdfs
 log_file=$log_dir/put.log
-put_retry_list=${5:-$log_dir/retry_put.list}
+put_retry_list=${4:-$log_dir/retry_put.list}
+put_black_list=${5:-$log_dir/put_black.list}
 timestamp="/bin/date +%s"
 now_timestamp=`$timestamp`
 
@@ -94,6 +95,7 @@ ONLY_UPLOAD(){
     $hdp_cmd -mv $2.tmp $2 &> /dev/null
     local nowtime=`$timestamp` ; local costtime=`/usr/bin/expr $nowtime - $now_timestamp`
     echo "`$log_date` $FUNCNAME $2 Upload Success $5 $costtime $4" >> $log_file
+    echo "$1 $3" >> $put_black_list
     [[ $6 == "delete" ]] && rm -rf $1
     return 0
   else
