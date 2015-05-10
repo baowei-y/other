@@ -100,28 +100,19 @@ RETRY_LIST(){
 # $1 : 原始上传列表文件
 # $2 : 用户提供的线程个数
 THREAD_POLICY(){
-  if [[ $# -ne 2 ]];then 
-    echo "`$log_date` $FUNCNAME Error: \$# 1= 2" >> $log_file
-    return 1 
-  fi
-  if [[ ! -f $1 ]];then
-    echo "`$log_date` $FUNCNAME $1 No such file" >> $log_file
-    return 2 
-  fi
-  echo "$2"|grep -q '^[-]\?[0-9]\+$'
+  echo "$threads"|grep -q '^[-]\?[0-9]\+$'
   if [[ $? -ne 0 ]];then
-    echo "`$log_date` $FUNCNAME $2 Invalid number" >> $log_file 
+    echo "`$log_date` $FUNCNAME \$threads is Invalid number" >> $log_file 
     return 3 
   fi
-  local list_sum=`cat $1|$wc_cmd -l`
+  local list_sum=`cat $put_hdfs_list|$wc_cmd -l`
   if [[ $list_sum -eq 0 ]];then
-    #echo "`$log_date` $FUNCNAME $1 is empty" >> $log_file
     return 0
   else
-    if [[ $2 -ge $max_threads ]];then
+    if [[ $threads -ge $max_threads ]];then
       [[ "$list_sum" -le "$max_threads" ]] && echo $list_sum || echo $max_threads
     else
-      [[ "$list_sum" -le "$2" ]] && echo $list_sum || echo $2
+      [[ "$list_sum" -le "$threads" ]] && echo $list_sum || echo $threads
     fi
   fi
 }
@@ -164,23 +155,16 @@ TIMEOUT_HANDLE(){
 # 创建线程执行脚本所需文件,此函数需要两个参数
 # $1 : 线程执行脚本id号
 # $2 : 要处理的具体文件的绝对路径 
+# $3 : 线程文件的完整内容行
 CREATE_THREAD_FILE(){
-  if [[ $# -ne 2 ]];then
-    echo "`$log_date` $FUNCNAME Error \$#!=2" >> $log_file
-    return 1 
-  fi
   if [[ -z $1 ]];then
     echo "`$log_date` $FUNCNAME $1 is empty" >> $log_file
     return 0 
   fi
-  if [[ ! -f $2 ]];then
-    echo "`$log_date` $FUNCNAME $2 no such file" >> $log_file 
-    return 2 
-  fi
   local file_size=`/usr/bin/du -b $2|awk '{print $1}'`
   local time_out=`echo $file_size $net_speed|awk '{printf("%.0lf",$1/$2+100)}'`
   local thread_file="$thread_file_pre"_"$1"_`$timestamp`_"$file_size"_"$time_out"
-  echo $2 > $thread_file
+  echo "$3" > $thread_file
   if [[ $? -eq 0 ]];then
     echo $thread_file 
     return 0
@@ -190,14 +174,11 @@ CREATE_THREAD_FILE(){
   fi
 }
 
-# 超时策略,此函数需要提供两个参数
+# 超时策略,此函数需要提供三个参数
 # $1 : 当前需要创建的线程个数id
 # $2 : 要处理文件的绝对路径
+# $3 : 要处理的当前行的完整内容 
 THREAD_FILE_POLICY(){
-  if [[ $# -ne 2 ]];then
-    echo "`$log_date` $FUNCNAME Error \$#!=2" >> $log_file
-    return 1 
-  fi
   if [[ -z $1 ]];then
     echo "`$log_date` $FUNCNAME $1 is empty" >> $log_file
     return 0 
@@ -216,11 +197,11 @@ THREAD_FILE_POLICY(){
       return 0 
     else
       if TIMEOUT_HANDLE $old_file ;then
-        echo `CREATE_THREAD_FILE $1 $2`
+        echo `CREATE_THREAD_FILE $1 $2 "$3"`
       fi
     fi 
   else
-    echo `CREATE_THREAD_FILE $1 $2`
+    echo `CREATE_THREAD_FILE $1 $2 "$3"`
   fi
 }
 
@@ -262,29 +243,30 @@ MASTER_CTRL(){
   fi
      
   while :;do
-    RETRY_LIST $2 $1
-    local final_threads=`THREAD_POLICY $1 $4`
+    RETRY_LIST $put_retry_list $put_hdfs_list
+    local final_threads=`THREAD_POLICY`
     [[ -z $final_threads ]] && break
     for t in `/usr/bin/seq 1 $final_threads`;do
-      local file_path=`sed -n "1p" $1`
+      local now_line=`sed -n "1p" $put_hdfs_list`
+      local file_path=`echo $now_line|awk '{print $1}'`
       echo $file_path|grep -q $final_dir
       if [[ $? -ne 0 ]];then
         echo "`$log_date` $FUNCNAME $file_path invalid file" >> $log_file
         echo $file_path >> $put_invalid_list 
-        sed -i "1d" $1
+        sed -i "1d" $put_hdfs_list
         continue
       fi
-      local thread_file=`THREAD_FILE_POLICY $t $file_path`
+      local thread_file=`THREAD_FILE_POLICY $t $file_path "$now_line"`
       if [[ -f $thread_file ]];then
-        /bin/bash $3 $thread_file $final_dir $hdfs_dir $2 $put_black_list &
-        sed -i "1d" $1
+        /bin/bash $thread_script $thread_file $put_retry_list $put_black_list &
+        sed -i "1d" $put_hdfs_list
       else
-        ls "$file_path"_"$5"_* &> /dev/null ; local rev=$?
+        grep -q "$file_path" $put_black_list; local rev=$?
         if [[ $rev -eq 0 ]];then
-          sed -i "1d" $1
+          sed -i "1d" $put_hdfs_list
         else
-          echo "$file_path" >> $2
-          sed -i "1d" $1
+          echo "$now_line" >> $put_retry_list
+          sed -i "1d" $put_hdfs_list
         fi
       fi
     done
@@ -293,4 +275,4 @@ MASTER_CTRL(){
   rm -rf $pid_file
 }
 
-MASTER_CTRL $put_hdfs_list $put_retry_list $thread_script $threads 
+MASTER_CTRL

@@ -1,7 +1,6 @@
 #!/bin/bash
 
 [[ ! -f $1 ]] && echo "Error, Invalid File" && exit 1
-[[ ! -d $2 ]] && echo "Error, Invalid Directory" && exit 1
 echo $$ >> $1
 
 [ -x /bin/basename ] && bn_cmd=/bin/basename
@@ -14,8 +13,8 @@ echo $$ >> $1
 log_date="/bin/date +%H:%M:%S/%Y-%m-%d"
 log_dir=/var/log/backup_to_hdfs
 log_file=$log_dir/put.log
-put_retry_list=${4:-$log_dir/retry_put.list}
-put_black_list=${5:-$log_dir/put_black.list}
+put_retry_list=${2:-$log_dir/retry_put.list}
+put_black_list=${3:-$log_dir/put_black.list}
 timestamp="/bin/date +%s"
 now_timestamp=`$timestamp`
 
@@ -106,17 +105,8 @@ ONLY_UPLOAD(){
 
 # 上传HDFS
 PUT_TO_HDFS(){
-  if [[ $# -ne 3 ]];then
-    echo "`$log_date` $FUNCNAME Error: \$# 1= 3"|TEE
-    return 1
-  elif [[ ! -f $1 ]];then
+  if [[ ! -f $1 ]];then
     echo "`$log_date` $FUNCNAME Error: \$1 Invalid File"|TEE
-    return 1
-  elif [[ ! -d $2 ]];then
-    echo "`$log_date` $FUNCNAME Error: \$2 Invalid Directory"|TEE
-    return 1
-  elif [[ -z $3 ]];then
-    echo "`$log_date` $FUNCNAME Error: \$3 is Empty"|TEE
     return 1
   fi
 
@@ -126,24 +116,24 @@ PUT_TO_HDFS(){
     return 2
   fi
 
-  local local_file=`sed -n "1p" $1|awk '{print $1}'`
-  local file_str=`sed -n "1p" $1|awk '{print $2}'`
+  local file_content=`sed -n "1p" $1`
+  local local_file=`echo $file_content|awk '{print $1}'`
+  local hdfs_file=`echo $file_content $1|awk '{print $2}'`
+  local file_str=`echo $file_content|awk '{print $3}'`
   local file_str=${file_str:-nnnnnno}
   local local_size=`$bn_cmd $1|awk -F_ '{print $4}'`
-  local hdfs_file=`echo $local_file|sed "s@$2@$3@1"`
   local hdfs_dir=`/usr/bin/dirname $hdfs_file`
-
   local valid_time=`$bn_cmd $1|awk -F_ '{print $NF}'`
   local filesize=`/usr/bin/du -sh $local_file|awk '{print $1}'`
 
-  HDFS_LOCATION_CHECK $hdfs_file $local_size $hdfs_dir ; hlc_rev=$?
+  HDFS_LOCATION_CHECK $hdfs_file $local_size $hdfs_dir ; local hlc_rev=$?
   local nowtime=`$timestamp`
   local costtime=`/usr/bin/expr $nowtime - $now_timestamp`
   case $hlc_rev in
     0)
       ONLY_UPLOAD $local_file $hdfs_file $local_size $valid_time $filesize
       if [[ $? -ne 0 ]] ;then
-        sed -n "1p" $1 >> $put_retry_list
+        echo "$file_content" >> $put_retry_list
         local nowtime=`$timestamp` ; local costtime=`/usr/bin/expr $nowtime - $now_timestamp`
         echo "`$log_date` ONLY_UPLOAD Upload Failed $filesize $costtime $valid_time" >> $log_file
       fi
@@ -152,16 +142,16 @@ PUT_TO_HDFS(){
       [[ $file_str == "delete" ]] && rm -rf $local_file 
       echo "`$log_date` $FUNCNAME $hdfs_file Upload Success $filesize $costtime $valid_time (check size)" >> $log_file ;;
     2)
-      sed -n "1p" $1 >> $put_retry_list
+      echo "$file_content" >> $put_retry_list
       echo "`$log_date` HDFS_LOCATION_CHECK Upload Failed: \$# != 2 $filesize $costtime $valid_time" >> $log_file ;;
     3)
-      sed -n "1p" $1 >> $put_retry_list
+      echo "$file_content" >> $put_retry_list
       echo "`$log_date` HDFS_LOCATION_CHECK Upload Failed: Can't create directory -> $hdfs_dir $filesize $costtime $valid_time" >> $log_file ;;
     4)
-      sed -n "1p" $1 >> $put_retry_list
+      echo "$file_content" >> $put_retry_list
       echo "`$log_date` HDFS_LOCATION_CHECK Upload Failed: Can't chmod 777 $hdfs_dir on the hdfs $filesize $costtime $valid_time" >> $log_file ;;
   esac
   rm -rf $1
 }
 
-PUT_TO_HDFS $1 $2 $3
+PUT_TO_HDFS $1
