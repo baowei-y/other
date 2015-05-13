@@ -24,6 +24,8 @@ echo $$ > $pid_file
 
 put_hdfs_list=$log_dir/put_hdfs.list
 put_black_list=$log_dir/put_black.list
+[ ! -f $put_hdfs_list ] && touch $put_hdfs_list
+[ ! -f $put_black_list ] && touch $put_black_list
 
 # 提供一个有效的本地文件作为参数即可
 blacklistCheck(){
@@ -75,6 +77,16 @@ argCheck(){
   fi 
 }
 
+putListCheck(){
+  if [ ! -f $put_hdfs_list ];then
+    return 0
+  fi
+  local p_lines=`cat $put_hdfs_list|$wc_cmd -l`
+  if [[ $p_lines -ne 0 ]];then
+    echo "`$log_date` $1 put_hdfs_list($put_hdfs_list) lines = $p_lines" >> $log_file
+    exit 0
+  fi
+}
 # 主调用函数，函数接受参数如下
 # $1 : 本地文件有效目录
 # $2 : 本地目录需要替换的前缀部分
@@ -82,12 +94,6 @@ argCheck(){
 # $4 : 多少分钟前的文件
 # $5 : 可以删除的多少天以前的文件
 mainFunc(){
-  local p_lines=`cat $put_hdfs_list|$wc_cmd -l`
-  if [[ $p_lines -ne 0 ]];then
-    echo "`$log_date` $1 put_hdfs_list($put_hdfs_list) lines = $p_lines" >> $log_file
-    exit 0
-  fi
-
   local v_min=${4:-120}
   for f in `find $1 -type f -a -mmin +$v_min -a -name "*.log.201*.tar.gz"`;do
     if blacklistCheck $f;then
@@ -104,4 +110,5 @@ mainFunc(){
 
 
 argCheck $1 $2 $3 $4 $5
+putListCheck
 mainFunc $1 $2 $3 $4 $5

@@ -38,6 +38,7 @@ put_invalid_list=$log_dir/put_hdfs_invalid.list
 put_hdfs_list=$log_dir/put_hdfs.list
 put_retry_list=$log_dir/put_retry.list
 put_black_list=$log_dir/put_black.list
+[ ! -f $put_black_list ] && touch $put_black_list
 
 
 # 日志记录函数
