@@ -12,7 +12,8 @@ echo $$ >> $1
 
 log_date="/bin/date +%H:%M:%S/%Y-%m-%d"
 log_dir=/var/log/backup_to_hdfs
-log_file=$log_dir/put.log
+
+log_file=$log_dir/upload_hdfs.log
 put_retry_list=${2:-$log_dir/retry_put.list}
 put_black_list=${3:-$log_dir/put_black.list}
 timestamp="/bin/date +%s"

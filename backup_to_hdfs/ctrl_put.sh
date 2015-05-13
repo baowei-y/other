@@ -7,20 +7,25 @@
 [ -x /usr/bin/uniq ] && uq_cmd=/usr/bin/uniq
 [ -x /usr/bin/hdfs ] && hdp_cmd="/usr/bin/hdfs dfs"
 
+log_date="/bin/date +%H:%M:%S/%Y-%m-%d"
+log_dir=/var/log/backup_to_hdfs
+log_file=$log_dir/`$bn_cmd $0`.log
+[ ! -d $log_dir ] && mkdir -p $log_dir
+
 # 检查是否有本脚本pid
-pid_file=/tmp/`$bn_cmd $0`_ftp_op.pid
+pid_file=$log_dir/`$bn_cmd $0`.pid
 if [[ -f $pid_file ]];then
  ps -p `cat $pid_file` &> /dev/null
- [[ "$?" -eq "0" ]] && echo "`$log_date` : $0 exist." && exit 0
+ if [[ "$?" -eq "0" ]];then
+   echo "`$log_date` : `cat $pid_file`[$pid_file] exist."
+   exit 0
+ fi
 fi
 echo $$ > $pid_file 
 
-log_date="/bin/date +%H:%M:%S/%Y-%m-%d"
-log_dir=/var/log/backup_to_hdfs
-log_file=$log_dir/crtl.log
-
 threads=${1:-10}
-thread_script=${2:-/opt/upload_thread.sh}
+thread_script=${2:-/opt/backup_to_hdfs/upload_thread.sh}
+final_dir=${3:-/ceph-storage}
 check_period=5
 timestamp="/bin/date +%s"
 thread_file_pre=$log_dir/threadfile
@@ -29,20 +34,11 @@ max_threads=32
 network_speed=5242880
 net_speed=`echo $network_speed $threads|awk '{printf("%.0lf",$1/$2)}'`
 
-if [[ ! -d $log_dir ]];then
-  mkdir -p $log_dir ; mkdir_res=$?
-  [[ $mkdir_res -ne 0 ]] && echo "$log_dir : Can't create directory" && exit 1
-fi
-
 put_invalid_list=$log_dir/put_hdfs_invalid.list
 put_hdfs_list=$log_dir/put_hdfs.list
 put_retry_list=$log_dir/put_retry.list
 put_black_list=$log_dir/put_black.list
 
-final_dir=${3:-/opt/localfiles}
-hdfs_dir=${4:-/logs_backup}
-retention_day=${5:-10}
-del_str=${6:-hdfs-ok}
 
 # 日志记录函数
 TEE(){
