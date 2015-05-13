@@ -37,7 +37,7 @@ blacklistCheck(){
     if grep -q $1 $put_black_list;then
       local file_size=`/usr/bin/du -b $1|awk '{print $1}'`
       local black_size=`grep $1 $put_black_list|awk '{print $NF}'|/usr/bin/tail -1`
-      if [[ $file_size == $black_size ]];then
+      if [[ "$file_size" == "$black_size" ]];then
         echo "`$log_date` $1 is exist in the hdfs" >> $log_file
         return 2
       else
@@ -67,7 +67,7 @@ delFile(){
 
 helpDoc(){
   echo "Usage: $0 [/long/dir] [/long/replace/path] [/hdfs/dir] [120(min)] [30(day)]"
-  echo "Exam: $0 /ceph-storage /ceph-storage /log_backup 180 30"
+  echo "Exam: $0 /storage/backup_log/360LOG /storage/backup_log /log_backup 180 8"
   exit 0
 }
 
@@ -95,12 +95,9 @@ putListCheck(){
 # $5 : 可以删除的多少天以前的文件
 mainFunc(){
   local v_min=${4:-120}
-  for f in `find $1 -type f -a -mmin +$v_min -a -name "*.log.201*.tar.gz"`;do
+  for f in `find $1 -type f -a -mmin +$v_min -a -name "*-201*.gz"`;do
     if blacklistCheck $f;then
-      local file_date=`$bn_cmd $f|sed "s@.*.log.\(201[0-9][0-9][0-9][0-9][0-9]\).*.\(tar.gz$\)@\1@g"`
       local hdfs_file=`echo $f|sed "s@$2@$3@g"`
-      local hdfs_dir="`$dn_cmd $hdfs_file`/$file_date"
-      local hdfs_file="$hdfs_dir/`$bn_cmd $hdfs_file`"
       echo "$f $hdfs_file" >> $put_hdfs_list
     fi
   done

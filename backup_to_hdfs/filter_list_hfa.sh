@@ -67,12 +67,12 @@ delFile(){
 
 helpDoc(){
   echo "Usage: $0 [/long/dir] [/long/replace/path] [/hdfs/dir] [120(min)] [30(day)]"
-  echo "Exam: $0 /ceph-storage /ceph-storage /log_backup 180 30"
+  echo "Exam: $0 \"/home/hadoop/irs*\" /home/hadoop /log_backup/HFA 180 5"
   exit 0
 }
 
 argCheck(){
-  if [[ ! -d $1 || ! -d $2 || $# -ne 5 ]];then
+  if [[ ! -d $2 || $# -ne 5 ]];then
     helpDoc
   fi 
 }
@@ -95,7 +95,9 @@ putListCheck(){
 # $5 : 可以删除的多少天以前的文件
 mainFunc(){
   local v_min=${4:-120}
-  for f in `find $1 -type f -a -mmin +$v_min -a -name "*.log.201*.tar.gz"`;do
+  local v_dirs=(`ls -d $1`)  
+  #echo ${v_dirs[@]}
+  for f in `find ${v_dirs[@]} -type f -a -mmin +$v_min -a -name "*.log.201*.tar.gz"`;do
     if blacklistCheck $f;then
       local file_date=`$bn_cmd $f|sed "s@.*.log.\(201[0-9][0-9][0-9][0-9][0-9]\).*.\(tar.gz$\)@\1@g"`
       local hdfs_file=`echo $f|sed "s@$2@$3@g"`
@@ -109,6 +111,6 @@ mainFunc(){
 }
 
 
-argCheck $1 $2 $3 $4 $5
+argCheck "$1" $2 $3 $4 $5
 putListCheck
-mainFunc $1 $2 $3 $4 $5
+mainFunc "$1" $2 $3 $4 $5
