@@ -205,43 +205,8 @@ THREAD_FILE_POLICY(){
   fi
 }
 
-# 删除周期控制，多久执行一次删除操作
-# 此函可接受两个参数
-# $1 ：周期时间，单位小时，例如 24  (参数为空时走默认值 24)
-# $2 : 删除标识文件，用于存放上次上次处理的时间戳，便于计算
-PERIOD_CHECK(){
-  local period_time=${1:-24}
-  local del_tag_file=${2:-/tmp/ftp_tag_to_delete}
-  [[ ! -f $del_tag_file ]] && echo `$timestamp` > $del_tag_file
-  local old_time=`cat $del_tag_file`
-  local now_time=`$timestamp` 
-  local valid_lease=`echo "$period_time $old_time"|awk '{print $1*60*60+$2}'`
-  if [[ $valid_lease -lt $now_time ]];then
-    echo $now_time > $del_tag_file
-    return 0
-  else
-    return 1
-  fi
-}
-
-# 找出某个目录下匹配指定策略的文件追加入文件列表
-# 
-HDFS_LIST_CHECK(){
-  [[ ! -d $1 ]] && return 1
-  [[ -z $2 ]] && return 2
-  [[ $# -ne 2 ]] && return 3
-  for f in `/bin/find $1 -type f -a ! -name "*_hdfs-ok_*"`;do
-    [[ -f $f ]] && echo $f >> $2
-  done
-}
-
 # 主控进程函数
 MASTER_CTRL(){
-  if [[ $# -ne 4 ]];then
-    echo "`$log_date` $FUNCNAME Error \$#!=4" >> $log_file
-    return 1 
-  fi
-     
   while :;do
     RETRY_LIST $put_retry_list $put_hdfs_list
     local final_threads=`THREAD_POLICY`

@@ -81,10 +81,6 @@ HDFS_LOCATION_CHECK(){
 # $5 本地文件的du -sh的统计大小
 # $6 是否删除文件关键字
 ONLY_UPLOAD(){
-  if [[ $# -ne 6 ]];then
-    echo "`$log_date` $FUNCNAME Error: \$# != 5"|TEE
-    return 1
-  fi
   if [[ ! -f $1 ]];then
     echo "`$log_date` $FUNCNAME Error: \$1=$1 no such file"|TEE
     return 1
@@ -119,8 +115,6 @@ PUT_TO_HDFS(){
   local file_content=`sed -n "1p" $1`
   local local_file=`echo $file_content|awk '{print $1}'`
   local hdfs_file=`echo $file_content $1|awk '{print $2}'`
-  local file_str=`echo $file_content|awk '{print $3}'`
-  local file_str=${file_str:-nnnnnno}
   local local_size=`$bn_cmd $1|awk -F_ '{print $4}'`
   local hdfs_dir=`/usr/bin/dirname $hdfs_file`
   local valid_time=`$bn_cmd $1|awk -F_ '{print $NF}'`
@@ -139,7 +133,7 @@ PUT_TO_HDFS(){
       fi
       ;;
     1)
-      [[ $file_str == "delete" ]] && rm -rf $local_file 
+      echo "$local_file $local_size" >> $put_black_list
       echo "`$log_date` $FUNCNAME $hdfs_file Upload Success $filesize $costtime $valid_time (check size)" >> $log_file ;;
     2)
       echo "$file_content" >> $put_retry_list
