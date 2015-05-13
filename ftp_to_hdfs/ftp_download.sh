@@ -86,22 +86,8 @@ ftpDel(){
 # 此函数检查参数文件中日志，输出或退出
 # $1 : 一个仅有日期的文件
 dateCheck(){
-  # 日期文件检查
-  if [[ ! -f $1 ]];then
-    echo "`$log_date` $FUNCNAME $1 No such file"|TEE
-    local mail_file="$path_mail.`$mail_date`"
-    echo "`$log_date` $FUNCNAME Error [$1] No such file" > $mail_file 
-    mailFunc $mail_file "MTF FTP PROBLEM : date"
-    exit 1
-  fi
-  # 如果日期为今天，则退出
-  local today=`/bin/date +%Y%m%d` 
-  local file_day=`cat $1`
-  if [[ $file_day == $today ]];then
-    echo "`$log_date` $FUNCNAME Exit [$1($file_day) == today($today)]"|TEE
-    exit 0
-  fi
   # 输出有效日期或根据传递进来的参数修改日期文件
+  local file_day=`cat $1`
   if [[ $# -eq 1 ]];then
     echo $file_day
     return 0
@@ -334,7 +320,7 @@ md5fileFind(){
 # 按照上述三个参数，最后得出路径： /MAIOZHEN/AdMonitor/20150402/report
 # 按照上述给出前两个个参数，最后得出路径： /MAIOZHEN/AdMonitor/20150402
 mainFunc(){
-  local dir_date=`dateCheck $2`
+  local dir_date=`dateCheck $ftp_dir_date`
   local dir_ftp=$1/$dir_date/$3
   local dir_local=`echo $dir_ftp|sed "s@$ftp_dir@$local_dir@g"`
 
@@ -359,6 +345,10 @@ mainFunc(){
 
 # 配置文件语法检查
 confCheck(){
+  # 如果日期为今天，则退出
+  local today=`/bin/date +%Y%m%d` 
+  local file_day=`cat $ftp_dir_date`
+  [[ "$file_day" == "$today" ]] && exit 0
   [[ ! -f $ftp_dir_date ]] && echo "[ftp_dir_date : $ftp_dir_date] invalid config in the [$1]" && exit 20
   [[ ! -x $cmd_mail ]] && echo "[cmd_mail: $cmd_mail] invalid config in the [$1] or permission error" && exit 21
   [[ -z $log_date ]] && echo "[log_date: $log_date] invalid config in the [$1]" && exit 22
