@@ -1,7 +1,5 @@
 #!/bin/bash
 
-[[ ! -f $1 ]] && echo "Error, Invalid File" && exit 1
-echo $$ >> $1
 
 [ -x /bin/basename ] && bn_cmd=/bin/basename
 [ -x /usr/bin/basename ] && bn_cmd=/usr/bin/basename
@@ -100,6 +98,19 @@ ONLY_UPLOAD(){
   fi
 }
 
+helpDoc(){
+  echo "Usage: $0 [thread_file] [retry_list_file] [black_list_file]"
+  echo "  [thread_file]: /[thread/path/and/str]_[num]_[timestamp]_[filesize(bit)]_[timeout(sec)]"
+  echo "Exam: $0 /var/log/backup_to_hdfs/threadfile_1_1431587477_361655_100 /var/log/backup_to_hdfs/put_retry.list /var/log/backup_to_hdfs/put_black.list"
+  exit 0
+}
+
+argCheck(){
+  if [[ $# -ne 3 || ! -f $1 ]];then
+    helpDoc
+  fi
+}
+
 # 上传HDFS
 PUT_TO_HDFS(){
   if [[ ! -f $1 ]];then
@@ -149,4 +160,7 @@ PUT_TO_HDFS(){
   rm -rf $1
 }
 
+argCheck $1 $2 $3
+
+echo $$ >> $1
 PUT_TO_HDFS $1

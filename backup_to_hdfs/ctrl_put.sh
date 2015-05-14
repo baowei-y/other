@@ -202,6 +202,18 @@ THREAD_FILE_POLICY(){
   fi
 }
 
+helpDoc(){
+  echo "Usage: $0 [threads] [thread_script_path] [valid path str]"
+  echo "Exam: $0 5 /opt/backup_to_hdfs/upload_thread.sh /ceph-storage"
+  exit 0
+}
+
+argCheck(){
+  if [[ $# -ne 3 || ! -f $2 || ! -d $3 ]];then
+    helpDoc
+  fi 
+}
+
 # 主控进程函数
 MASTER_CTRL(){
   while :;do
@@ -237,4 +249,5 @@ MASTER_CTRL(){
   rm -rf $pid_file
 }
 
+argCheck $1 $2 $3
 MASTER_CTRL

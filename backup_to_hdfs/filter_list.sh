@@ -53,14 +53,14 @@ blacklistCheck(){
 }
 
 delFile(){
-  local days=${1:-30}
-  local delstr=`/bin/date -d "-$1 days" +%Y%m%d`
-  for d in `grep $delstr $put_black_list|awk '{print $1}'`;do
+  #local days=${1:-30}
+  #local delstr=`/bin/date -d "-$1 days" +%Y%m%d`
+  for d in `cat $put_black_list|awk '{print $1}'`;do
     if [ -f $d ];then
       rm -f $d
       echo "`$log_date` $d deleted" >> $log_file
-    else
-      echo "`$log_date` $d does not exist" >> $log_file
+#    else
+#      echo "`$log_date` $d does not exist" >> $log_file
     fi
   done
 }
@@ -105,10 +105,10 @@ mainFunc(){
     fi
   done
  
-  delFile $5 
 }
 
 
+delFile 
 argCheck $1 $2 $3 $4 $5
 putListCheck
-mainFunc $1 $2 $3 $4 $5
+mainFunc $1 $2 $3 $4

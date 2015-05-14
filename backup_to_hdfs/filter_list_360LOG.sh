@@ -59,8 +59,8 @@ delFile(){
     if [ -f $d ];then
       rm -f $d
       echo "`$log_date` $d deleted" >> $log_file
-    else
-      echo "`$log_date` $d does not exist" >> $log_file
+    #else
+    #  echo "`$log_date` $d does not exist" >> $log_file
     fi
   done
 }
