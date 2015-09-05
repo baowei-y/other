@@ -1,0 +1,21 @@
+1、帮助
+2、命令同步  ok
+3、文件同步
+4、Hosts、DnsMasq
+5、DHCP
+6、nginx
+7、磁盘
+8、hdp.py修改ip并集群生效
+9、Crontab
+10、hosts_py生成和处理
+11、ipbond
+12、本地源复制
+13、md5校验
+14、rdate/ntp
+15、安装依赖包
+16、同步文件时权限判断
+17、部分系统修改公式
+18、线程超时/远程执行超时
+	http://www.cszhi.com/20130528/python-threading.html
+
+	
